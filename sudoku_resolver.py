@@ -81,8 +81,6 @@ def init_sudoku_position():
             else:
                 block += 'X'
         sudoku_position.append(block)
-    
-    print(sudoku_position)
 
 
 def is_all_filled():
@@ -125,7 +123,7 @@ def resolve_sudoku(y=0, x=0):
 
 
 def print_sudoku():
-    global sudoku, start
+    global sudoku, start, sudoku_position
     print("\033[%d;%dH" % (0, 0))
     for index, row in enumerate(sudoku):
         if index % 3 == 0:
@@ -133,8 +131,14 @@ def print_sudoku():
         row_str = ''
         for i, ch in enumerate(row):
             if i % 3 == 0:
+                row_str += '||'
+            else:
                 row_str += '|'
-            row_str += f'|  {ch}  '
+            if sudoku_position[index][i] == 'O':
+                row_str += '\033[31m'
+            row_str += f'  {ch}  '
+            if sudoku_position[index][i] == 'O':
+                row_str += '\033[39m'
         print(f'{row_str}||')
         print("-" * 59)
     print('time: {:8.4f}s'.format(time.time() - start))
@@ -147,6 +151,7 @@ def input_sudoku():
         row = input(f'스도쿠를 입력하세요 {i+1} 번째 행 (빈칸은 0으로 적으세요) :')
         sudoku[i] = row.replace('0', ' ')
     os.system('cls')
+    init_sudoku_position()
     print_sudoku()
     ok = input("제대로 입력하셨나요?(y/n)")
 
@@ -157,8 +162,6 @@ def input_sudoku():
 
 start = 0
 input_sudoku()
-init_sudoku_position()
-print_sudoku()
 os.system('cls')
 start = time.time()
 resolve_sudoku()
