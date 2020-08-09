@@ -1,5 +1,10 @@
+from asyncio.exceptions import CancelledError
+from asyncio.tasks import create_task
 import os
 import time
+import asyncio
+import itertools
+import sys
 
 sudoku = [
     "39   2   ",
@@ -72,7 +77,7 @@ def check_item(row_index, col_index, num):
 
 def init_sudoku_position():
     global sudoku, sudoku_position
-
+    sudoku_position = []
     for row in sudoku:
         block = ''
         for item in row:
@@ -94,10 +99,8 @@ def is_all_filled():
         
 
 def resolve_sudoku(y=0, x=0):
-    global sudoku, sudoku_position
+    global sudoku, sudoku_position #, verbose
     
-    print_sudoku()
-
     if is_all_filled():
         if check_resolved():
             return True
@@ -141,28 +144,76 @@ def print_sudoku():
                 row_str += '\033[39m'
         print(f'{row_str}||')
         print("-" * 59)
-    print('time: {:8.4f}s'.format(time.time() - start))
 
+verbose = False
 
 def input_sudoku():
-    global sudoku
+    global sudoku #, verbose
 
     for i in range(9):
-        row = input(f'스도쿠를 입력하세요 {i+1} 번째 행 (빈칸은 0으로 적으세요) :')
+        row = input(f'스도쿠를 입력하세요 {i+1} 번째 행 (빈칸은 0으로 적으세요): ')
         sudoku[i] = row.replace('0', ' ')
     os.system('cls')
     init_sudoku_position()
     print_sudoku()
-    ok = input("제대로 입력하셨나요?(y/n)")
-
+    ok = input("제대로 입력하셨나요?(y/n): ")
     if ok.lower() == 'y':
+        # v = input("과정을 출력할까요? (시간 오래걸리지도 모름)(y/n): ")
+        # verbose = True if v.lower() == 'y' else False
         return
     else:
         input_sudoku()
 
-start = 0
-input_sudoku()
-os.system('cls')
-start = time.time()
-resolve_sudoku()
-print_sudoku()
+def input_sudoku_file():
+    global sudoku
+
+    with open('sudoku') as fp:
+        row = 0
+        while True:
+            line = fp.readline()
+            if not line:
+                break
+            sudoku[row] = line.strip().replace('0', ' ')
+            row += 1
+    
+    init_sudoku_position()
+    print_sudoku()
+    ok = input("제대로 입력하셨나요?(y/n): ")
+    if ok.lower() == 'y':
+        return
+    else:
+        exit(1)
+
+
+async def print_calculating(msg):
+    write, flush = sys.stdout.write, sys.stdout.flush
+    for ch in itertools.cycle('|/-\\'):
+        status = ch + f' {msg}'
+        write(status)
+        flush()
+        write(f'\033[{len(status)*2}D')
+        try:
+            await asyncio.sleep(0.1)
+        except CancelledError:
+            break
+
+async def main():
+    while True:
+        os.system('cls')
+        input_sudoku_file()
+        os.system('cls')
+        task = asyncio.create_task(print_calculating('스도쿠 푸는중!!'))
+        # task = asyncio.create_task(async_print_sudoku())
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, resolve_sudoku)
+        task.cancel()
+        await task
+        os.system('cls')
+        print_sudoku()
+        restart = input('재시작?? (y/n): ')
+        
+        if restart.lower() == 'n':
+            break
+
+if __name__ == '__main__':
+    asyncio.run(main())
